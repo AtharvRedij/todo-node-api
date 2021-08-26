@@ -1,0 +1,6 @@
+{
+    "jwtPrivateKey": "highlySecureKey",
+    "db": "mongodb://localhost/todos-db",
+    "port": "5000"
+  }
+  
