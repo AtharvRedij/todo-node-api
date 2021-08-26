@@ -8,6 +8,10 @@ const todoSchema = new mongoose.Schema({
     minlength: 5,
     maxlength: 50,
   },
+  owner: {
+    type: String,
+    required: true,
+  },
 });
 
 const Todo = mongoose.model("Todo", todoSchema);

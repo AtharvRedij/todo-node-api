@@ -7,7 +7,9 @@ const auth = require("../middleware/auth");
 const router = express.Router();
 
 router.get("/", auth, async (req, res) => {
-  const todos = await Todo.find().select("-__v").sort("title");
+  const todos = await Todo.find({ owner: req.user._id })
+    .select("-__v")
+    .sort("title");
   res.send(todos);
 });
 
@@ -17,6 +19,12 @@ router.get("/:id", auth, validateObjectId, async (req, res) => {
   if (!todo)
     return res.status(404).send("The todo with the given ID was not found.");
 
+  if (todo.owner !== req.user._id) {
+    return res
+      .status(401)
+      .send("Access denied. This todo does not belong to you.");
+  }
+
   res.send(todo);
 });
 
@@ -24,7 +32,7 @@ router.post("/", auth, async (req, res) => {
   const { error } = validate(req.body);
   if (error) return res.status(400).send(error.details[0].message);
 
-  let todo = new Todo({ title: req.body.title });
+  let todo = new Todo({ title: req.body.title, owner: req.user._id });
   todo = await todo.save();
 
   res.send(todo);
@@ -34,25 +42,37 @@ router.put("/:id", [auth, validateObjectId], async (req, res) => {
   const { error } = validate(req.body);
   if (error) return res.status(400).send(error.details[0].message);
 
-  const todo = await Todo.findByIdAndUpdate(
-    req.params.id,
-    { title: req.body.title },
-    {
-      new: true,
-    }
-  );
+  const todo = await Todo.findById(req.params.id).select("-__v");
 
   if (!todo)
     return res.status(404).send("The todo with the given ID was not found.");
+
+  if (todo.owner !== req.user._id) {
+    return res
+      .status(401)
+      .send("Access denied. This todo does not belong to you.");
+  }
+
+  todo.title = req.body.title;
+
+  await todo.save();
 
   res.send(todo);
 });
 
 router.delete("/:id", [auth, validateObjectId], async (req, res) => {
-  const todo = await Todo.findByIdAndRemove(req.params.id);
+  const todo = await Todo.findById(req.params.id).select("-__v");
 
   if (!todo)
     return res.status(404).send("The todo with the given ID was not found.");
+
+  if (todo.owner !== req.user._id) {
+    return res
+      .status(401)
+      .send("Access denied. This todo does not belong to you.");
+  }
+
+  await todo.delete();
 
   res.send(todo);
 });
